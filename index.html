@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Create custom links</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+  body {
+    margin: 0;
+    background: #1b1f24;
+    color: #e6e6e6;
+    font-family: system-ui, Arial, sans-serif;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 16px;
+  }
+
+  h1 {
+    font-size: 32px;
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    color: #9aa4ad;
+    font-size: 14px;
+  }
+
+  .card {
+    margin-top: 24px;
+    background: #20252b;
+    border-radius: 14px;
+    padding: 24px;
+    border: 1px solid #2a2f36;
+  }
+
+  label {
+    font-size: 14px;
+    margin-top: 14px;
+    display: block;
+  }
+
+  input, textarea {
+    width: 100%;
+    background: transparent;
+    color: #e6e6e6;
+    border: 1px solid #2f85ff;
+    border-radius: 6px;
+    padding: 10px;
+    margin-top: 6px;
+    font-size: 14px;
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 90px;
+  }
+
+  .preset-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .preset-grid button {
+    background: #2a2f36;
+    border: 1px solid #2f85ff;
+    color: #e6e6e6;
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  .preset-grid button:hover {
+    background: #1f6fff;
+  }
+
+  button.generate {
+    margin-top: 20px;
+    width: 100%;
+    padding: 14px;
+    background: #1f6fff;
+    color: white;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  button.generate:hover {
+    background: #155be0;
+  }
+
+  .output {
+    margin-top: 20px;
+  }
+
+  .output input {
+    cursor: pointer;
+  }
+
+  .note {
+    margin-top: 12px;
+    font-size: 13px;
+    color: #9aa4ad;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="container" id="app"></div>
+
+<script>
+/* ---------------- VIDEO PRESETS ---------------- */
+
+const videoPresets = {
+  rickroll: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  meme2: "https://www.youtube.com/watch?v=PXqcHi2fkXI",
+  meme3: "https://www.youtube.com/watch?v=y_X9d_K6xjc"
+};
+
+function setVideo(key) {
+  document.getElementById("video").value = videoPresets[key];
+}
+
+/* ---------------- ROUTER ---------------- */
+
+function router() {
+  const hash = location.hash || "#/create";
+  const app = document.getElementById("app");
+
+  // CREATE PAGE
+  if (hash === "#/create") {
+    app.innerHTML = `
+      <h1>Create custom links</h1>
+      <div class="subtitle">Simple GitHub Pages version</div>
+
+      <div class="card">
+        <label>What is this link about?</label>
+        <input id="about" placeholder="Important update">
+
+        <label>Choose a video</label>
+        <div class="preset-grid">
+          <button type="button" onclick="setVideo('rickroll')">Rick Astley</button>
+          <button type="button" onclick="setVideo('meme2')">Funny Surprise</button>
+          <button type="button" onclick="setVideo('meme3')">Random Clip</button>
+        </div>
+
+        <label>Or paste a YouTube link</label>
+        <input id="video" placeholder="https://www.youtube.com/watch?v=...">
+
+        <button class="generate" type="button" onclick="generate()">Generate Link</button>
+
+        <div class="note">
+          Links use hash routing so they work on GitHub Pages
+        </div>
+      </div>
+    `;
+  }
+
+  // REDIRECT PAGE
+  else if (hash.startsWith("#/go")) {
+    const params = new URLSearchParams(hash.split("?")[1]);
+    const video = params.get("v");
+
+    if (video) {
+      window.location.replace(decodeURIComponent(video));
+    } else {
+      app.innerHTML = "<p>Invalid link.</p>";
+    }
+  }
+}
+
+/* ---------------- GENERATE ---------------- */
+
+function generate() {
+  const video = document.getElementById("video").value.trim();
+
+  if (!video || !video.startsWith("http")) {
+    alert("Please choose or paste a valid YouTube link.");
+    return;
+  }
+
+  const base = window.location.href.split("#")[0];
+  const link = base + "#/go?v=" + encodeURIComponent(video);
+
+  document.getElementById("app").innerHTML = `
+    <h1>Link Ready</h1>
+
+    <div class="card output">
+      <input value="${link}" readonly onclick="this.select()">
+      <button class="generate" type="button" onclick="location.hash='#/create'">
+        Create Another
+      </button>
+    </div>
+  `;
+}
+
+window.addEventListener("hashchange", router);
+router();
+</script>
+
+</body>
+</html>
