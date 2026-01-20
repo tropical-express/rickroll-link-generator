@@ -108,6 +108,14 @@
     color: #9aa4ad;
     text-align: center;
   }
+
+  .preview-image {
+    margin-top: 12px;
+    max-width: 100%;
+    border-radius: 10px;
+    cursor: pointer;
+    border: 1px solid #2f85ff;
+  }
 </style>
 </head>
 <body>
@@ -128,7 +136,8 @@ const videoPresets = {
 let state = {
   step: 1,
   about: "",
-  video: ""
+  video: "",
+  image: ""
 };
 
 /* ---------- ROUTER ---------- */
@@ -143,19 +152,35 @@ function router() {
   else if (hash.startsWith("#/go")) {
     const params = new URLSearchParams(hash.split("?")[1]);
     const video = params.get("v");
+    const title = params.get("t");
+    const image = params.get("i");
 
-    document.getElementById("app").innerHTML = `
-      <h1>${escapeHtml(params.get("t") || "Breaking Update")}</h1>
-
+    let content = `
+      <h1>${escapeHtml(title || "Breaking Update")}</h1>
       <div class="card">
-        <p>This page contains a related video.</p>
+    `;
+
+    if (image) {
+      content += `
+        <img
+          src="${decodeURIComponent(image)}"
+          class="preview-image"
+          onclick="goToVideo('${video}')"
+          alt="Preview image"
+        >
+        <div class="note">Click the image to continue</div>
+      `;
+    } else {
+      content += `
         <button class="primary" onclick="goToVideo('${video}')">
           View Video
         </button>
-      </div>
+      `;
+    }
 
-      <div class="note">Click to continue</div>
-    `;
+    content += `</div>`;
+
+    document.getElementById("app").innerHTML = content;
   }
 }
 
@@ -164,11 +189,11 @@ function router() {
 function renderWizard() {
   const app = document.getElementById("app");
 
-  // STEP 1
+  // STEP 1 — ABOUT
   if (state.step === 1) {
     app.innerHTML = `
       <h1>Create Custom Links</h1>
-      <div class="subtitle">Step 1 of 3</div>
+      <div class="subtitle">Step 1 of 4</div>
 
       <div class="card">
         <label>What is this link about?</label>
@@ -176,16 +201,14 @@ function renderWizard() {
 
         <button class="primary" onclick="nextStep1()">Next</button>
       </div>
-
-      <div class="note">Choose a believable title</div>
     `;
   }
 
-  // STEP 2
+  // STEP 2 — VIDEO
   if (state.step === 2) {
     app.innerHTML = `
       <h1>Create Custom Links</h1>
-      <div class="subtitle">Step 2 of 3</div>
+      <div class="subtitle">Step 2 of 4</div>
 
       <div class="card">
         <label>Choose a video</label>
@@ -204,30 +227,43 @@ function renderWizard() {
     `;
   }
 
-  // STEP 3
+  // STEP 3 — IMAGE
   if (state.step === 3) {
     app.innerHTML = `
       <h1>Create Custom Links</h1>
-      <div class="subtitle">Step 3 of 3</div>
+      <div class="subtitle">Step 3 of 4</div>
+
+      <div class="card">
+        <label>Image URL (optional)</label>
+        <input id="image" placeholder="https://example.com/image.jpg" value="${escapeHtml(state.image)}">
+
+        <button class="secondary" onclick="prevStep()">Back</button>
+        <button class="primary" onclick="nextStep3()">Next</button>
+      </div>
+
+      <div class="note">This image will be clickable</div>
+    `;
+  }
+
+  // STEP 4 — GENERATE
+  if (state.step === 4) {
+    app.innerHTML = `
+      <h1>Create Custom Links</h1>
+      <div class="subtitle">Step 4 of 4</div>
 
       <div class="card">
         <button class="primary" onclick="generate()">Generate Link</button>
         <button class="secondary" onclick="prevStep()">Back</button>
       </div>
-
-      <div class="note">Your link will be generated</div>
     `;
   }
 }
 
-/* ---------- STEP HANDLERS ---------- */
+/* ---------- STEP LOGIC ---------- */
 
 function nextStep1() {
   const val = document.getElementById("about").value.trim();
-  if (!val) {
-    alert("Please enter what the link is about.");
-    return;
-  }
+  if (!val) return alert("Please enter a title.");
   state.about = val;
   state.step = 2;
   renderWizard();
@@ -241,12 +277,15 @@ function pickVideo(key) {
 
 function nextStep2() {
   const val = document.getElementById("video").value.trim();
-  if (!val.startsWith("http")) {
-    alert("Please choose or paste a valid YouTube link.");
-    return;
-  }
+  if (!val.startsWith("http")) return alert("Enter a valid video link.");
   state.video = val;
   state.step = 3;
+  renderWizard();
+}
+
+function nextStep3() {
+  state.image = document.getElementById("image").value.trim();
+  state.step = 4;
   renderWizard();
 }
 
@@ -259,24 +298,24 @@ function prevStep() {
 
 function generate() {
   const base = window.location.href.split("#")[0];
-  const link =
+
+  let link =
     base +
     "#/go?v=" +
     encodeURIComponent(state.video) +
     "&t=" +
     encodeURIComponent(state.about);
 
+  if (state.image) {
+    link += "&i=" + encodeURIComponent(state.image);
+  }
+
   document.getElementById("app").innerHTML = `
     <h1>Link Ready</h1>
-
     <div class="card">
       <input value="${link}" readonly onclick="this.select()">
-      <button class="primary" onclick="location.hash='#/create'">
-        Create Another
-      </button>
+      <button class="primary" onclick="location.hash='#/create'">Create Another</button>
     </div>
-
-    <div class="note">Share this link</div>
   `;
 }
 
