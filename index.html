@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Create custom links</title>
+<title>Create Custom Links</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
@@ -25,8 +25,8 @@
   }
 
   .subtitle {
-    color: #9aa4ad;
     font-size: 14px;
+    color: #9aa4ad;
   }
 
   .card {
@@ -38,12 +38,12 @@
   }
 
   label {
-    font-size: 14px;
-    margin-top: 14px;
     display: block;
+    margin-top: 14px;
+    font-size: 14px;
   }
 
-  input, textarea {
+  input {
     width: 100%;
     background: transparent;
     color: #e6e6e6;
@@ -52,11 +52,6 @@
     padding: 10px;
     margin-top: 6px;
     font-size: 14px;
-  }
-
-  textarea {
-    resize: vertical;
-    min-height: 90px;
   }
 
   .preset-grid {
@@ -80,7 +75,7 @@
     background: #1f6fff;
   }
 
-  button.generate {
+  button.primary {
     margin-top: 20px;
     width: 100%;
     padding: 14px;
@@ -92,16 +87,19 @@
     cursor: pointer;
   }
 
-  button.generate:hover {
-    background: #155be0;
-  }
-
-  .output {
-    margin-top: 20px;
-  }
-
-  .output input {
+  button.secondary {
+    margin-top: 10px;
+    width: 100%;
+    padding: 12px;
+    background: transparent;
+    color: #9aa4ad;
+    border: 1px solid #2a2f36;
+    border-radius: 8px;
     cursor: pointer;
+  }
+
+  button.primary:hover {
+    background: #155be0;
   }
 
   .note {
@@ -117,7 +115,7 @@
 <div class="container" id="app"></div>
 
 <script>
-/* ---------------- VIDEO PRESETS ---------------- */
+/* ---------- VIDEO PRESETS ---------- */
 
 const videoPresets = {
   rickroll: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
@@ -125,82 +123,179 @@ const videoPresets = {
   meme3: "https://www.youtube.com/watch?v=y_X9d_K6xjc"
 };
 
-function setVideo(key) {
-  document.getElementById("video").value = videoPresets[key];
-}
+/* ---------- STATE ---------- */
 
-/* ---------------- ROUTER ---------------- */
+let state = {
+  step: 1,
+  about: "",
+  video: ""
+};
+
+/* ---------- ROUTER ---------- */
 
 function router() {
   const hash = location.hash || "#/create";
-  const app = document.getElementById("app");
 
-  // CREATE PAGE
   if (hash === "#/create") {
-    app.innerHTML = `
-      <h1>Create custom links</h1>
-      <div class="subtitle">Simple GitHub Pages version</div>
-
-      <div class="card">
-        <label>What is this link about?</label>
-        <input id="about" placeholder="Important update">
-
-        <label>Choose a video</label>
-        <div class="preset-grid">
-          <button type="button" onclick="setVideo('rickroll')">Rick Astley</button>
-          <button type="button" onclick="setVideo('meme2')">Funny Surprise</button>
-          <button type="button" onclick="setVideo('meme3')">Random Clip</button>
-        </div>
-
-        <label>Or paste a YouTube link</label>
-        <input id="video" placeholder="https://www.youtube.com/watch?v=...">
-
-        <button class="generate" type="button" onclick="generate()">Generate Link</button>
-
-        <div class="note">
-          Links use hash routing so they work on GitHub Pages
-        </div>
-      </div>
-    `;
+    renderWizard();
   }
 
-  // REDIRECT PAGE
   else if (hash.startsWith("#/go")) {
     const params = new URLSearchParams(hash.split("?")[1]);
     const video = params.get("v");
 
-    if (video) {
-      window.location.replace(decodeURIComponent(video));
-    } else {
-      app.innerHTML = "<p>Invalid link.</p>";
-    }
+    document.getElementById("app").innerHTML = `
+      <h1>${escapeHtml(params.get("t") || "Breaking Update")}</h1>
+
+      <div class="card">
+        <p>This page contains a related video.</p>
+        <button class="primary" onclick="goToVideo('${video}')">
+          View Video
+        </button>
+      </div>
+
+      <div class="note">Click to continue</div>
+    `;
   }
 }
 
-/* ---------------- GENERATE ---------------- */
+/* ---------- WIZARD ---------- */
 
-function generate() {
-  const video = document.getElementById("video").value.trim();
+function renderWizard() {
+  const app = document.getElementById("app");
 
-  if (!video || !video.startsWith("http")) {
+  // STEP 1
+  if (state.step === 1) {
+    app.innerHTML = `
+      <h1>Create Custom Links</h1>
+      <div class="subtitle">Step 1 of 3</div>
+
+      <div class="card">
+        <label>What is this link about?</label>
+        <input id="about" placeholder="Important update" value="${escapeHtml(state.about)}">
+
+        <button class="primary" onclick="nextStep1()">Next</button>
+      </div>
+
+      <div class="note">Choose a believable title</div>
+    `;
+  }
+
+  // STEP 2
+  if (state.step === 2) {
+    app.innerHTML = `
+      <h1>Create Custom Links</h1>
+      <div class="subtitle">Step 2 of 3</div>
+
+      <div class="card">
+        <label>Choose a video</label>
+        <div class="preset-grid">
+          <button onclick="pickVideo('rickroll')">Rick Astley</button>
+          <button onclick="pickVideo('meme2')">Funny Surprise</button>
+          <button onclick="pickVideo('meme3')">Random Clip</button>
+        </div>
+
+        <label>Or paste a YouTube link</label>
+        <input id="video" placeholder="https://www.youtube.com/watch?v=..." value="${escapeHtml(state.video)}">
+
+        <button class="secondary" onclick="prevStep()">Back</button>
+        <button class="primary" onclick="nextStep2()">Next</button>
+      </div>
+    `;
+  }
+
+  // STEP 3
+  if (state.step === 3) {
+    app.innerHTML = `
+      <h1>Create Custom Links</h1>
+      <div class="subtitle">Step 3 of 3</div>
+
+      <div class="card">
+        <button class="primary" onclick="generate()">Generate Link</button>
+        <button class="secondary" onclick="prevStep()">Back</button>
+      </div>
+
+      <div class="note">Your link will be generated</div>
+    `;
+  }
+}
+
+/* ---------- STEP HANDLERS ---------- */
+
+function nextStep1() {
+  const val = document.getElementById("about").value.trim();
+  if (!val) {
+    alert("Please enter what the link is about.");
+    return;
+  }
+  state.about = val;
+  state.step = 2;
+  renderWizard();
+}
+
+function pickVideo(key) {
+  state.video = videoPresets[key];
+  const input = document.getElementById("video");
+  if (input) input.value = state.video;
+}
+
+function nextStep2() {
+  const val = document.getElementById("video").value.trim();
+  if (!val.startsWith("http")) {
     alert("Please choose or paste a valid YouTube link.");
     return;
   }
+  state.video = val;
+  state.step = 3;
+  renderWizard();
+}
 
+function prevStep() {
+  state.step--;
+  renderWizard();
+}
+
+/* ---------- GENERATE ---------- */
+
+function generate() {
   const base = window.location.href.split("#")[0];
-  const link = base + "#/go?v=" + encodeURIComponent(video);
+  const link =
+    base +
+    "#/go?v=" +
+    encodeURIComponent(state.video) +
+    "&t=" +
+    encodeURIComponent(state.about);
 
   document.getElementById("app").innerHTML = `
     <h1>Link Ready</h1>
 
-    <div class="card output">
+    <div class="card">
       <input value="${link}" readonly onclick="this.select()">
-      <button class="generate" type="button" onclick="location.hash='#/create'">
+      <button class="primary" onclick="location.hash='#/create'">
         Create Another
       </button>
     </div>
+
+    <div class="note">Share this link</div>
   `;
 }
+
+/* ---------- HELPERS ---------- */
+
+function goToVideo(url) {
+  window.location.href = decodeURIComponent(url);
+}
+
+function escapeHtml(str) {
+  return (str || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+/* ---------- START ---------- */
 
 window.addEventListener("hashchange", router);
 router();
